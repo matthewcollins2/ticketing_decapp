@@ -1,4 +1,3 @@
-# ticketing_decapp
 # ticketing_decapp — BlockDesk Decentralized Ticketing DApp
 
 A decentralized IT-support ticketing system built with Ethereum (smart contract), IPFS (for metadata & attachments), and a React front-end.
