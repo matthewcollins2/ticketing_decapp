@@ -50,12 +50,12 @@ Make sure you have installed:
     Update .env file located in client subfolder.
 
 5. **Run Scripts**
-    ```
+```
     "scripts": {
   "ganache": "ganache --networkId 1337 --chain.chainId 1337 --mnemonic \"candy maple cake sugar pudding cream honey rich smooth crumble sweet treat\" --port 7545",
   "migrate": "sleep 3 && truffle migrate --reset",
   "client": "cd client && npm start",
   "dev-all": "npm-run-all -p ganache migrate client"
     }
-   ```     
+```     
 **from bash terminal at root folder run-> npm run dev-all
