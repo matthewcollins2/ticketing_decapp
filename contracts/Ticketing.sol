@@ -28,15 +28,21 @@ contract Ticketing {
 
     function createTicket(string memory _ipfsHash) public returns (uint256) {
         ticketCount++;
-        tickets[ticketCount] = Ticket(ticketCount, msg.sender, address(0), _ipfsHash, Status.OPEN);
+        tickets[ticketCount] = Ticket(
+            ticketCount,
+            msg.sender,
+            address(0),
+            _ipfsHash,
+            Status.OPEN
+        );
 
         emit TicketCreated(ticketCount, msg.sender);
-
         return ticketCount;
     }
 
     function assignTicket(uint256 _id, address _agent) public {
         require(_id > 0 && _id <= ticketCount, "Invalid ticket");
+
         Ticket storage t = tickets[_id];
         t.assignedTo = _agent;
         t.status = Status.ASSIGNED;
@@ -46,19 +52,36 @@ contract Ticketing {
 
     function updateStatus(uint256 _id, Status _status) public {
         require(_id > 0 && _id <= ticketCount, "Invalid ticket");
+
         Ticket storage t = tickets[_id];
-        require(msg.sender == t.creator || msg.sender == t.assignedTo, "Not authorized");
+        require(
+            msg.sender == t.creator || msg.sender == t.assignedTo,
+            "Not authorized"
+        );
 
         t.status = _status;
+
+        
+        if (_status == Status.CLOSED) {
+            t.assignedTo = address(0);
+        }
 
         emit TicketStatusChanged(_id, _status, msg.sender);
     }
 
     function closeTicket(uint256 _id) public {
         require(_id > 0 && _id <= ticketCount, "Invalid ticket");
+
         Ticket storage t = tickets[_id];
+        require(
+            msg.sender == t.creator || msg.sender == t.assignedTo,
+            "Not authorized"
+        );
 
         t.status = Status.CLOSED;
+
+        
+        t.assignedTo = address(0);
 
         emit TicketClosed(_id, msg.sender);
     }

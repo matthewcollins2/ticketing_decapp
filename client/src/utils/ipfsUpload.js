@@ -1,24 +1,45 @@
-// src/utils/ipfsUpload.js
+const PINATA_JWT = process.env.REACT_APP_PINATA_JWT;
+const GATEWAY = process.env.REACT_APP_GATEWAY;
 
-export async function uploadToPinata(jsonBody) {
-  console.log("Sending JSON to backend for Pinata upload…", jsonBody);
-
-  const res = await fetch("http://localhost:5000/api/ipfs/uploadJson", {
+export async function uploadJsonToIPFS(json) {
+  const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${PINATA_JWT}`,
     },
-    body: JSON.stringify(jsonBody),
+    body: JSON.stringify(json),
   });
 
-  if (!res.ok) {
-    const t = await res.text();
-    console.error("Backend IPFS error:", res.status, t);
-    throw new Error(`Backend IPFS upload failed: ${res.status}`);
-  }
+  if (!res.ok) throw new Error("JSON upload failed");
 
   const data = await res.json();
-  console.log("Backend Pinata response:", data);
 
-  return data.IpfsHash; // CID
+  return {
+    cid: data.IpfsHash,         
+    url: `${GATEWAY}${data.IpfsHash}`
+  };
 }
+
+export async function uploadFileToIPFS(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${PINATA_JWT}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) throw new Error("File upload failed");
+
+  const data = await res.json();
+
+  return {
+    cid: data.IpfsHash,
+    url: `${GATEWAY}${data.IpfsHash}`
+  };
+}
+

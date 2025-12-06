@@ -2,7 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useWallet } from "../context/WalletContext";
-import "./Navbar.css"; // optional, or style inline
+import "./Navbar.css";
 
 export default function Navbar() {
   const { address, network, connectWallet, disconnectWallet, connecting } =
@@ -17,64 +17,34 @@ export default function Navbar() {
     : "No network";
 
   return (
-    <nav
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "10px 20px",
-        backgroundColor: "#0d1117",
-        color: "#fff",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <span style={{ fontWeight: "bold", fontSize: "1.2rem" }}>
-          BlockDesk
-        </span>
-        <Link to="/" style={{ color: "#fff", textDecoration: "none" }}>
-          Dashboard
-        </Link>
-        <Link to="/create" style={{ color: "#fff", textDecoration: "none" }}>
-          Create Ticket
-        </Link>
-        <Link to="/admin" style={{ color: "#fff", textDecoration: "none" }}>
-          Admin
-        </Link>
-        <Link to="/assign" style={{ color: "#fff", textDecoration: "none" }}>
-          Assign Ticket
-        </Link>
+    <nav className="navbar">
+      {/* LEFT: Logo */}
+      <div className="nav-logo">BlockDesk</div>
+
+      {/* CENTER: Navigation Links */}
+      <div className="nav-links">
+        <Link to="/">Dashboard</Link>
+        <Link to="/create">Create Ticket</Link>
+        <Link to="/admin">Admin</Link>
+        <Link to="/assign">Assign Ticket</Link>
       </div>
 
-      <div style={{ textAlign: "right" }}>
-        <div style={{ fontSize: "0.85rem" }}>{netLabel}</div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <span style={{ fontSize: "0.9rem" }}>{shortAddr}</span>
+      {/* RIGHT: Wallet + Network */}
+      <div className="nav-right">
+        <span className="nav-network">{netLabel}</span>
+
+        <div className="nav-wallet">
+          <span>{shortAddr}</span>
+
           {address ? (
-            <button
-              onClick={disconnectWallet}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "4px",
-                border: "1px solid #555",
-                background: "#161b22",
-                color: "#fff",
-                cursor: "pointer",
-              }}
-            >
+            <button className="btn-disconnect" onClick={disconnectWallet}>
               Disconnect
             </button>
           ) : (
             <button
+              className="btn-connect"
               onClick={connectWallet}
               disabled={connecting}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "4px",
-                border: "none",
-                background: "#238636",
-                color: "#fff",
-                cursor: "pointer",
-              }}
             >
               {connecting ? "Connecting..." : "Connect Wallet"}
             </button>

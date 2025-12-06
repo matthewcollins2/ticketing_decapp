@@ -67,25 +67,37 @@ export default function AdminDashboard() {
 
   const statusNames = ["OPEN", "ASSIGNED", "IN_PROGRESS", "CLOSED"];
 
-  // Write: update the ticket status
+  
   const updateStatus = async (ticketId, newStatus) => {
-    if (!wallet) {
-      alert("Please connect your wallet.");
-      return;
-    }
+  if (!wallet) {
+    alert("Please connect your wallet.");
+    return;
+  }
 
-    try {
-      const contract = await contractUtils.getWriteContract();
-      const tx = await contract.updateStatus(ticketId, newStatus);
-      await tx.wait();
+  try {
+    console.log("Updating ticket:", ticketId, "→", newStatus);
 
-      alert(`Status updated for Ticket #${ticketId}`);
-      loadTickets();
-    } catch (err) {
-      console.error("Status update error:", err);
-      alert("Failed to update status.");
-    }
-  };
+    const contract = await contractUtils.getWriteContract();
+    console.log("Contract loaded:", contract);
+
+    const signer = await contract.runner;
+    console.log("Signer address:", signer.address);
+
+    console.log("Calling contract.updateStatus...");
+    const tx = await contract.updateStatus(ticketId, newStatus);
+    console.log("TX sent:", tx);
+
+    await tx.wait();
+    console.log("TX confirmed!");
+
+    alert(`Status updated for Ticket #${ticketId}`);
+    loadTickets();
+  } catch (err) {
+    console.error("Status update error:", err);
+    alert("Failed to update status. See console.");
+  }
+};
+
 
   return (
     <div style={{ padding: "20px" }}>

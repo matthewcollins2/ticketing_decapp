@@ -1,14 +1,16 @@
 // src/pages/CreateTicket.js
 import React, { useState } from "react";
-import contractUtils from "../utils/contract";  // <-- NEW: ethers contract
-import { uploadToPinata } from "../utils/ipfsUpload";
+import contractUtils from "../utils/contract";
+import { uploadFileToIPFS, uploadJsonToIPFS } from "../utils/ipfsUpload";
 
 export default function CreateTicket() {
+  const [title, setTitle] = useState("");
   const [equipmentType, setEquipmentType] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [commonIssue, setCommonIssue] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
   const [remedialAction, setRemedialAction] = useState("");
+  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const commonIssueList = [
@@ -24,13 +26,11 @@ export default function CreateTicket() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!window.ethereum) {
-      alert("Please install MetaMask to submit a ticket.");
+      alert("Please install MetaMask.");
       return;
     }
-
-    if (!equipmentType || !serialNumber || !commonIssue || !issueDescription) {
+    if (!title || !equipmentType || !serialNumber || !commonIssue || !issueDescription) {
       alert("Please fill in all required fields.");
       return;
     }
@@ -38,55 +38,70 @@ export default function CreateTicket() {
     try {
       setLoading(true);
 
-      // ---- Build ticket JSON ----
-      const ticketData = {
+      let uploadedFiles = [];
+      for (let file of files) {
+        const result = await uploadFileToIPFS(file);
+        uploadedFiles.push({
+          fileName: file.name,
+          cid: result.cid,
+          url: result.url,
+        });
+      }
+
+      const metadata = {
+        title,
         equipmentType,
         serialNumber,
         commonIssue,
         issueDescription,
         remedialAction,
+        files: uploadedFiles,
         createdAt: new Date().toISOString(),
       };
 
-      console.log("Uploading JSON to IPFS...", ticketData);
-      const cid = await uploadToPinata(ticketData);
-      console.log("IPFS CID received:", cid);
+      const { cid: metadataCID } = await uploadJsonToIPFS(metadata);
 
-      // ---- Load write-enabled contract ----
       const contract = await contractUtils.getWriteContract();
-
-      // ---- Submit transaction ----
-      console.log("Sending transaction to blockchain...");
-      const tx = await contract.createTicket(cid);
+      const tx = await contract.createTicket(metadataCID);
       await tx.wait();
 
       alert("Ticket submitted successfully!");
 
-      // Clear form
+      setTitle("");
       setEquipmentType("");
       setSerialNumber("");
       setCommonIssue("");
       setIssueDescription("");
       setRemedialAction("");
+      setFiles([]);
 
     } catch (err) {
       console.error("SUBMIT ERROR:", err);
-      alert("Error submitting ticket. Check console.");
+      alert("Error submitting ticket.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-      <h2>Create New Ticket</h2>
+    <div style={{ maxWidth: "650px", margin: "0 auto", paddingBottom: "40px" }}>
+      <h2 style={{ marginBottom: "20px" }}>Create New Ticket</h2>
 
       <form onSubmit={handleSubmit}>
+        <label>Title *</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Short summary of the issue"
+          style={inputStyle}
+        />
+
         <label>Equipment Type *</label>
         <select
           value={equipmentType}
           onChange={(e) => setEquipmentType(e.target.value)}
-          style={{ width: "100%", padding: "10px", marginBottom: "15px" }}
+          style={inputStyle}
         >
           <option value="">Select equipment</option>
           <option value="Laptop">Laptop</option>
@@ -102,15 +117,15 @@ export default function CreateTicket() {
           type="text"
           value={serialNumber}
           onChange={(e) => setSerialNumber(e.target.value)}
-          placeholder="Enter equipment serial number"
-          style={{ width: "100%", padding: "10px", marginBottom: "15px" }}
+          placeholder="Enter serial number"
+          style={inputStyle}
         />
 
         <label>Common Issue *</label>
         <select
           value={commonIssue}
           onChange={(e) => setCommonIssue(e.target.value)}
-          style={{ width: "100%", padding: "10px", marginBottom: "15px" }}
+          style={inputStyle}
         >
           <option value="">Select issue</option>
           {commonIssueList.map((issue, idx) => (
@@ -125,8 +140,8 @@ export default function CreateTicket() {
           rows={4}
           value={issueDescription}
           onChange={(e) => setIssueDescription(e.target.value)}
-          placeholder="Describe the problem..."
-          style={{ width: "100%", padding: "10px", marginBottom: "15px" }}
+          placeholder="Describe the problem…"
+          style={textAreaStyle}
         />
 
         <label>Remedial Action Taken</label>
@@ -134,23 +149,50 @@ export default function CreateTicket() {
           rows={3}
           value={remedialAction}
           onChange={(e) => setRemedialAction(e.target.value)}
-          placeholder="Optional: What troubleshooting steps were tried?"
-          style={{ width: "100%", padding: "10px", marginBottom: "20px" }}
+          placeholder="Optional details…"
+          style={textAreaStyle}
         />
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: "12px 24px",
-            fontSize: "18px",
-            cursor: "pointer",
-            width: "100%",
-          }}
-        >
-          {loading ? "Submitting..." : "Submit Ticket"}
+        <label>Attach Files</label>
+        <input
+          type="file"
+          multiple
+          onChange={(e) => setFiles(Array.from(e.target.files))}
+          style={inputStyle}
+        />
+
+        <button type="submit" disabled={loading} style={submitButtonStyle}>
+          {loading ? "Submitting…" : "Submit Ticket"}
         </button>
       </form>
     </div>
   );
 }
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  marginBottom: "15px",
+  border: "1px solid #ccc",
+  borderRadius: "6px",
+  fontSize: "16px",
+  boxSizing: "border-box",
+};
+
+const textAreaStyle = {
+  ...inputStyle,
+  height: "120px",
+  resize: "vertical",
+};
+
+const submitButtonStyle = {
+  padding: "14px 20px",
+  width: "100%",
+  backgroundColor: "#0d6efd",
+  color: "white",
+  fontSize: "18px",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  marginTop: "10px",
+};

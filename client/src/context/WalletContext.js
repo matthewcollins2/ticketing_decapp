@@ -9,15 +9,17 @@ import React, {
 import { BrowserProvider, Contract } from "ethers";
 import Ticketing from "../abi/Ticketing.json";
 
-// ⭐ Your real deployed contract address (CHECKSUM SAFE)
-const CONTRACT_ADDRESS = "0xfEe7dE0522EC84c1DB0620065Ea205831DcE26A3";
+function getDeployedAddress() {
+  const networks = Ticketing.networks;
+  const chainId = 1337;
+  if (!networks || !networks[chainId]) {
+    throw new Error("Contract not deployed on chain " + chainId);
+  }
+  return networks[chainId].address;
+}
 
-// ⭐ Local network override (stops ENS lookups)
-const LOCAL_NETWORK = {
-  chainId: 1337,
-  name: "local",
-};
-
+const CONTRACT_ADDRESS = getDeployedAddress();
+const LOCAL_NETWORK = { chainId: 1337, name: "local" };
 const WalletContext = createContext(null);
 
 export const WalletProvider = ({ children }) => {
@@ -37,21 +39,17 @@ export const WalletProvider = ({ children }) => {
     setProvider(null);
     setSigner(null);
     setContract(null);
+    localStorage.removeItem("connected");
   };
 
-  /**
-   * Connect wallet (Stable function for useEffect)
-   */
   const connectWallet = useCallback(async () => {
     if (!isMetaMaskAvailable) {
-      alert("MetaMask not detected. Please install the extension.");
+      alert("MetaMask not detected.");
       return;
     }
 
     try {
       setConnecting(true);
-
-      // ⭐ Correct provider creation with network override
       const browserProvider = new BrowserProvider(
         window.ethereum,
         LOCAL_NETWORK
@@ -61,16 +59,16 @@ export const WalletProvider = ({ children }) => {
 
       const s = await browserProvider.getSigner();
       const addr = await s.getAddress();
-      const net = LOCAL_NETWORK; // force local network label
 
-      // Attach the smart contract
       const c = new Contract(CONTRACT_ADDRESS, Ticketing.abi, s);
 
       setProvider(browserProvider);
       setSigner(s);
       setAddress(addr);
-      setNetwork(net);
+      setNetwork(LOCAL_NETWORK);
       setContract(c);
+
+      localStorage.setItem("connected", "true");
     } catch (err) {
       console.error("connectWallet error:", err);
       resetState();
@@ -79,11 +77,18 @@ export const WalletProvider = ({ children }) => {
     }
   }, [isMetaMaskAvailable]);
 
-  const disconnectWallet = () => resetState();
+  const disconnectWallet = async () => {
+    resetState();
+    localStorage.removeItem("connected");
 
-  /**
-   * Auto-reconnect on refresh
-   */
+    try {
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+    } catch (_) {}
+  };
+
   useEffect(() => {
     if (!isMetaMaskAvailable) return;
 
@@ -93,9 +98,11 @@ export const WalletProvider = ({ children }) => {
       .listAccounts()
       .then(async (accounts) => {
         if (accounts.length === 0) return;
-        await connectWallet();
+        if (localStorage.getItem("connected")) {
+          await connectWallet();
+        }
       })
-      .catch((err) => console.warn("Auto-connect failed:", err));
+      .catch(() => {});
 
     const handleAccountsChanged = () => connectWallet();
     const handleChainChanged = () => window.location.reload();
