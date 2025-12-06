@@ -56,6 +56,6 @@ Make sure you have installed:
   "migrate": "sleep 3 && truffle migrate --reset",
   "client": "cd client && npm start",
   "dev-all": "npm-run-all -p ganache migrate client"
-}
-```
-    **from bash terminal at root folder run-> npm run dev-all
+    }
+        
+**from bash terminal at root folder run-> npm run dev-all
